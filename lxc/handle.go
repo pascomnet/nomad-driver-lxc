@@ -31,6 +31,8 @@ type taskHandle struct {
 	startedAt   time.Time
 	completedAt time.Time
 	exitResult  *drivers.ExitResult
+
+	net *drivers.DriverNetwork
 }
 
 var (

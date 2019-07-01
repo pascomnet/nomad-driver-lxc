@@ -281,6 +281,8 @@ func (d *Driver) RecoverTask(handle *drivers.TaskHandle) error {
 		totalCpuStats:  stats.NewCpuStats(),
 		userCpuStats:   stats.NewCpuStats(),
 		systemCpuStats: stats.NewCpuStats(),
+		// FIXME: handle net
+		// net: taskState
 	}
 
 	d.tasks.Set(taskState.TaskConfig.ID, h)
@@ -340,6 +342,20 @@ func (d *Driver) StartTask(cfg *drivers.TaskConfig) (*drivers.TaskHandle, *drive
 	}
 
 	pid := c.InitPid()
+	ip := ""
+	ips, err := c.WaitIPAddresses(time.Second * 15)
+	if err != nil {
+		d.logger.Error("Could not get IP number from container", "err", err)
+	} else {
+		if len(ips) > 0 {
+			ip = ips[0]
+		}
+	}
+	net := &drivers.DriverNetwork{
+		//PortMap:       driverConfig.PortMap,
+		IP: ip,
+		//AutoAdvertise: autoUse,
+	}
 
 	h := &taskHandle{
 		container:  c,
@@ -352,6 +368,8 @@ func (d *Driver) StartTask(cfg *drivers.TaskConfig) (*drivers.TaskHandle, *drive
 		totalCpuStats:  stats.NewCpuStats(),
 		userCpuStats:   stats.NewCpuStats(),
 		systemCpuStats: stats.NewCpuStats(),
+
+		net: net,
 	}
 
 	driverState := TaskState{
@@ -370,7 +388,7 @@ func (d *Driver) StartTask(cfg *drivers.TaskConfig) (*drivers.TaskHandle, *drive
 
 	go h.run()
 
-	return handle, nil, nil
+	return handle, net, nil
 }
 
 func (d *Driver) WaitTask(ctx context.Context, taskID string) (<-chan *drivers.ExitResult, error) {
