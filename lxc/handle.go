@@ -33,6 +33,8 @@ type taskHandle struct {
 	exitResult  *drivers.ExitResult
 
 	net *drivers.DriverNetwork
+	doneCh                chan bool
+
 }
 
 var (
@@ -76,6 +78,9 @@ func (h *taskHandle) run() {
 		return
 	}
 
+	// Shutdown stats collection
+	close(h.doneCh)
+
 	h.stateLock.Lock()
 	defer h.stateLock.Unlock()
 
@@ -100,19 +105,23 @@ func (h *taskHandle) handleStats(ctx context.Context, ch chan *drivers.TaskResou
 		select {
 		case <-ctx.Done():
 			return
-
+		case <-h.doneCh:
+			h.logger.Debug("Stopping stats collector")
+			return
 		case <-timer.C:
 			timer.Reset(interval)
 		}
 		cpuStats, err := h.container.CPUStats()
 		if err != nil {
-			h.logger.Error("failed to get container cpu stats", "error", err)
-			return
+			// log but give it another try (maybe container shuts down atm)
+			h.logger.Debug("failed to get container cpu stats", "error", err)
+			continue
 		}
 		total, err := h.container.CPUTime()
 		if err != nil {
-			h.logger.Error("failed to get container cpu time", "error", err)
-			return
+			// log but give it another try (maybe container shuts down atm)
+			h.logger.Debug("failed to get container cpu time", "error", err)
+			continue
 		}
 
 		t := time.Now()

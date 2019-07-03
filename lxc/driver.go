@@ -51,6 +51,10 @@ var (
 			hclspec.NewAttr("destroy_containers", "bool", false),
 			hclspec.NewLiteral("true"),
 		),
+		"network_mode": hclspec.NewDefault(
+			hclspec.NewAttr("network_mode", "string", false),
+			hclspec.NewLiteral("\"bridge\""),
+		),
 	})
 
 	// taskConfigSpec is the hcl specification for the driver config section of
@@ -71,6 +75,7 @@ var (
 		"log_level":      hclspec.NewAttr("log_level", "string", false),
 		"verbosity":      hclspec.NewAttr("verbosity", "string", false),
 		"volumes":        hclspec.NewAttr("volumes", "list(string)", false),
+		"network_mode":   hclspec.NewAttr("network_mode", "string", false),
 	})
 
 	// capabilities is returned by the Capabilities RPC and indicates what
@@ -120,6 +125,9 @@ type Config struct {
 
 	// if enabled (default!): destroy lxc container when task is destroyed
 	DestroyContainers bool `codec:"destroy_containers"`
+
+	// default networking mode if not specified in task config
+	NetworkMode string `codec:"network_mode"`
 }
 
 // TaskConfig is the driver configuration of a task within a job
@@ -139,6 +147,7 @@ type TaskConfig struct {
 	LogLevel             string   `codec:"log_level"`
 	Verbosity            string   `codec:"verbosity"`
 	Volumes              []string `codec:"volumes"`
+	NetworkMode          string   `codec:"network_mode"`
 }
 
 // TaskState is the state which is encoded in the handle returned in
@@ -148,6 +157,7 @@ type TaskState struct {
 	TaskConfig    *drivers.TaskConfig
 	ContainerName string
 	StartedAt     time.Time
+	Net           *drivers.DriverNetwork
 }
 
 // NewLXCDriver returns a new DriverPlugin implementation
@@ -261,7 +271,9 @@ func (d *Driver) RecoverTask(handle *drivers.TaskHandle) error {
 		return d.recoverPre09Task(handle)
 	}
 
+	d.logger.Debug("trying to recover", "configid", handle.Config.ID)
 	if _, ok := d.tasks.Get(handle.Config.ID); ok {
+		d.logger.Debug("no need to recover, it's in the map")
 		return nil
 	}
 
@@ -276,6 +288,7 @@ func (d *Driver) RecoverTask(handle *drivers.TaskHandle) error {
 	}
 
 	initPid := c.InitPid()
+	d.logger.Debug("Recovered", "name", c.Name(), "pid", initPid)
 	h := &taskHandle{
 		container:  c,
 		initPid:    initPid,
@@ -285,17 +298,34 @@ func (d *Driver) RecoverTask(handle *drivers.TaskHandle) error {
 		exitResult: &drivers.ExitResult{},
 		logger:     d.logger,
 
+		doneCh:                make(chan bool),
+		
 		totalCpuStats:  stats.NewCpuStats(),
 		userCpuStats:   stats.NewCpuStats(),
 		systemCpuStats: stats.NewCpuStats(),
-		// FIXME: handle net
-		// net: taskState
+		net:            taskState.Net,
 	}
 
 	d.tasks.Set(taskState.TaskConfig.ID, h)
 
 	go h.run()
 	return nil
+}
+
+func (d *Driver) getIp(c *lxc.Container) string {
+	ip := ""
+	d.logger.Debug("Waiting for ip number")
+	ips, err := c.WaitIPAddresses(time.Second * 15)
+	if err != nil {
+		d.logger.Error("Could not get IP number from container", "err", err)
+	} else {
+		if len(ips) > 0 {
+			ip = ips[0]
+			d.logger.Debug("Got ip", "ip", ip)
+		}
+	}
+	return ip
+
 }
 
 func (d *Driver) StartTask(cfg *drivers.TaskConfig) (*drivers.TaskHandle, *drivers.DriverNetwork, error) {
@@ -328,7 +358,7 @@ func (d *Driver) StartTask(cfg *drivers.TaskConfig) (*drivers.TaskHandle, *drive
 		}
 	}
 
-	if err := d.configureContainerNetwork(c); err != nil {
+	if err := d.configureContainerNetwork(c, driverConfig); err != nil {
 		cleanup()
 		return nil, nil, err
 	}
@@ -349,19 +379,10 @@ func (d *Driver) StartTask(cfg *drivers.TaskConfig) (*drivers.TaskHandle, *drive
 	}
 
 	pid := c.InitPid()
-	ip := ""
-	ips, err := c.WaitIPAddresses(time.Second * 15)
-	if err != nil {
-		d.logger.Error("Could not get IP number from container", "err", err)
-	} else {
-		if len(ips) > 0 {
-			ip = ips[0]
-		}
-	}
 	net := &drivers.DriverNetwork{
 		//PortMap:       driverConfig.PortMap,
-		IP: ip,
-		//AutoAdvertise: autoUse,
+		IP:            d.getIp(c),
+		AutoAdvertise: true,
 	}
 
 	h := &taskHandle{
@@ -371,6 +392,8 @@ func (d *Driver) StartTask(cfg *drivers.TaskConfig) (*drivers.TaskHandle, *drive
 		procState:  drivers.TaskStateRunning,
 		startedAt:  time.Now().Round(time.Millisecond),
 		logger:     d.logger,
+
+		doneCh:                make(chan bool),
 
 		totalCpuStats:  stats.NewCpuStats(),
 		userCpuStats:   stats.NewCpuStats(),
@@ -383,6 +406,7 @@ func (d *Driver) StartTask(cfg *drivers.TaskConfig) (*drivers.TaskHandle, *drive
 		ContainerName: c.Name(),
 		TaskConfig:    cfg,
 		StartedAt:     h.startedAt,
+		Net:           net,
 	}
 
 	if err := handle.SetDriverState(&driverState); err != nil {
@@ -446,6 +470,8 @@ func (d *Driver) StopTask(taskID string, timeout time.Duration, signal string) e
 	if !ok {
 		return drivers.ErrTaskNotFound
 	}
+
+	d.logger.Debug("Stopping task", "taskid", taskID, "container", handle.container.Name())
 
 	if err := handle.shutdown(timeout); err != nil {
 		return fmt.Errorf("executor Shutdown failed: %v", err)
