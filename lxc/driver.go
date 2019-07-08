@@ -298,8 +298,8 @@ func (d *Driver) RecoverTask(handle *drivers.TaskHandle) error {
 		exitResult: &drivers.ExitResult{},
 		logger:     d.logger,
 
-		doneCh:                make(chan bool),
-		
+		doneCh: make(chan bool),
+
 		totalCpuStats:  stats.NewCpuStats(),
 		userCpuStats:   stats.NewCpuStats(),
 		systemCpuStats: stats.NewCpuStats(),
@@ -356,6 +356,7 @@ func (d *Driver) StartTask(cfg *drivers.TaskConfig) (*drivers.TaskHandle, *drive
 		if err := c.Destroy(); err != nil {
 			d.logger.Error("failed to clean up from an error in Start", "error", err)
 		}
+		c.Release()
 	}
 
 	if err := d.configureContainerNetwork(c, driverConfig); err != nil {
@@ -393,7 +394,7 @@ func (d *Driver) StartTask(cfg *drivers.TaskConfig) (*drivers.TaskHandle, *drive
 		startedAt:  time.Now().Round(time.Millisecond),
 		logger:     d.logger,
 
-		doneCh:                make(chan bool),
+		doneCh: make(chan bool),
 
 		totalCpuStats:  stats.NewCpuStats(),
 		userCpuStats:   stats.NewCpuStats(),
@@ -505,6 +506,7 @@ func (d *Driver) DestroyTask(taskID string, force bool) error {
 	}
 	// finally cleanup task map
 	d.tasks.Delete(taskID)
+	handle.container.Release()
 	return nil
 }
 

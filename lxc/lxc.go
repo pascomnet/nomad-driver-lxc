@@ -57,12 +57,14 @@ func (d *Driver) initializeContainer(cfg *drivers.TaskConfig, taskConfig TaskCon
 	if v, ok := verbosityLevels[taskConfig.Verbosity]; ok {
 		c.SetVerbosity(v)
 	} else {
+		c.Release()
 		return nil, fmt.Errorf("lxc driver config 'verbosity' can only be either quiet or verbose")
 	}
 
 	if v, ok := logLevels[taskConfig.LogLevel]; ok {
 		c.SetLogLevel(v)
 	} else {
+		c.Release()
 		return nil, fmt.Errorf("lxc driver config 'log_level' can only be trace, debug, info, warn or error")
 	}
 
