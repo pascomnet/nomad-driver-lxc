@@ -54,22 +54,28 @@ func (d *Driver) initializeContainer(cfg *drivers.TaskConfig, taskConfig TaskCon
 		return nil, fmt.Errorf("failed to initialize container: %v", err)
 	}
 
-	if v, ok := verbosityLevels[taskConfig.Verbosity]; ok {
-		c.SetVerbosity(v)
-	} else {
-		c.Release()
+	v, ok := verbosityLevels[taskConfig.Verbosity]
+	if !ok {
+		d.releaseLxcHandle(c)
 		return nil, fmt.Errorf("lxc driver config 'verbosity' can only be either quiet or verbose")
 	}
+	c.SetVerbosity(v)
 
-	if v, ok := logLevels[taskConfig.LogLevel]; ok {
-		c.SetLogLevel(v)
-	} else {
-		c.Release()
+	level, ok := logLevels[taskConfig.LogLevel]
+	if !ok {
+		d.releaseLxcHandle(c)
 		return nil, fmt.Errorf("lxc driver config 'log_level' can only be trace, debug, info, warn or error")
+	}
+	if err := c.SetLogLevel(level); err != nil {
+		d.releaseLxcHandle(c)
+		return nil, fmt.Errorf("Unable to set log level: %v", err)
 	}
 
 	logFile := filepath.Join(cfg.TaskDir().Dir, fmt.Sprintf("%v-lxc.log", cfg.Name))
-	c.SetLogFile(logFile)
+	if err := c.SetLogFile(logFile); err != nil {
+		d.releaseLxcHandle(c)
+		return nil, fmt.Errorf("Unable to set log file: %v", err)
+	}
 
 	return c, nil
 }
@@ -210,6 +216,13 @@ func (d *Driver) formatTaskDevices(devices []*drivers.DeviceConfig) []string {
 	}
 
 	return result
+}
+
+func (d *Driver) releaseLxcHandle(container *lxc.Container) {
+	if err := container.Release(); err != nil {
+		// we can not do much about it, let's log it at least
+		d.logger.Error("failed to release lxc handle. POTENTIAL MEMORY LEAK", "error", err)
+	}
 }
 
 func (d *Driver) formatMount(hostPath, taskPath string, readOnly bool) string {

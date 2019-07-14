@@ -356,7 +356,7 @@ func (d *Driver) StartTask(cfg *drivers.TaskConfig) (*drivers.TaskHandle, *drive
 		if err := c.Destroy(); err != nil {
 			d.logger.Error("failed to clean up from an error in Start", "error", err)
 		}
-		c.Release()
+		d.releaseLxcHandle(c)
 	}
 
 	if err := d.configureContainerNetwork(c, driverConfig); err != nil {
@@ -506,7 +506,7 @@ func (d *Driver) DestroyTask(taskID string, force bool) error {
 	}
 	// finally cleanup task map
 	d.tasks.Delete(taskID)
-	handle.container.Release()
+	d.releaseLxcHandle(handle.container)
 	return nil
 }
 
