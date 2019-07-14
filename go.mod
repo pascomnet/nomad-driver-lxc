@@ -13,6 +13,7 @@ require (
 	github.com/Sirupsen/logrus v1.4.0 // indirect
 	github.com/boltdb/bolt v1.3.1 // indirect
 	github.com/fsouza/go-dockerclient v1.4.1 // indirect
+	github.com/golangci/golangci-lint v1.17.1 // indirect
 	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75 // indirect
 	github.com/hashicorp/consul-template v0.20.0 // indirect
 	github.com/hashicorp/consul/api v1.1.0 // indirect

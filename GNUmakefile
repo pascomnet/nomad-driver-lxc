@@ -5,6 +5,7 @@ default: build
 .PHONY: clean
 clean: ## Remove build artifacts
 	rm -rf $(PROJECT_ROOT)/pkg
+	rm -rf $(PROJECT_ROOT)/build
 
 .PHONY: build
 build:
@@ -27,42 +28,20 @@ bootstrap: deps lint-deps # install all dependencies
 .PHONY: deps
 deps:  ## Install build and development dependencies
 	@echo "==> Updating build dependencies..."
-	go get -u github.com/kardianos/govendor
-	go get -u gotest.tools/gotestsum
+	#go get -u gotest.tools/gotestsum
 	command -v nomad || go get -u github.com/hashicorp/nomad
 
 .PHONY: lint-deps
 lint-deps: ## Install linter dependencies
 	@echo "==> Updating linter dependencies..."
-	go get -u github.com/alecthomas/gometalinter
-	gometalinter --install
+	mkdir -p build
+	GOBIN=$(PROJECT_ROOT)/build GO111MODULE=on go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.17.1
 
 .PHONY: check
 check: ## Lint the source code
 	@echo "==> Linting source code..."
-	@gometalinter \
-		--deadline 10m \
-		--vendor \
-		--sort="path" \
-		--aggregate \
-		--enable-gc \
-		--disable-all \
-		--enable goimports \
-		--enable misspell \
-		--enable vet \
-		--enable deadcode \
-		--enable varcheck \
-		--enable ineffassign \
-		--enable structcheck \
-		--enable unconvert \
-		--enable gofmt \
-		./...
+	$(PROJECT_ROOT)/build/golangci-lint run
 
-.PHONY: vendorfmt
-vendorfmt:
-	@echo "--> Formatting vendor/vendor.json"
-	test -x $(GOPATH)/bin/vendorfmt || go get -u github.com/magiconair/vendorfmt/cmd/vendorfmt
-		vendorfmt
 .PHONY: changelogfmt
 changelogfmt:
 	@echo "--> Making [GH-xxxx] references clickable..."
