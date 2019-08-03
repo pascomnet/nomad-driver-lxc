@@ -1,0 +1,26 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.12
+    steps:
+      - checkout
+      - run:
+          name: prepare lxc
+          command: |
+            sudo -E bash ./scripts/travis-linux.s
+      - run:
+          name: prepare go mod
+          command: |
+            make bootstrap
+      - run:
+          name: lint_and_test
+          command: |
+            sudo -E "PATH=$PATH" GOTESTSUM_JUNITFILE=/tmp/results.xml make travis
+      - run:
+          name: compile driver
+          command: |
+            make release
+      - store_artifacts:
+          path: pkg/linux_amd64.zip
+          destination: linux_amd64.zip
