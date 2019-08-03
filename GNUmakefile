@@ -30,12 +30,12 @@ bootstrap: deps # install all dependencies
 deps:  ## Install build and development dependencies
 	mkdir -p build
 	go version
+	@echo "==> Download build dependencies..."
+	go mod download
 	@echo "==> Installing golangci-lint..."
 	GOBIN=$(PROJECT_ROOT)/build GO111MODULE=on go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.17.1
 	@echo "==> Installing gotestsum..."
 	GOBIN=$(PROJECT_ROOT)/build GO111MODULE=on go get -u gotest.tools/gotestsum@v0.3.5
-	@echo "==> Download build dependencies..."
-	go mod download
 
 .PHONY: check
 check: ## Lint the source code
