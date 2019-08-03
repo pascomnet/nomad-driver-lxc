@@ -4,6 +4,7 @@ default: build
 
 .PHONY: clean
 clean: ## Remove build artifacts
+	go clean
 	rm -rf $(PROJECT_ROOT)/pkg
 	rm -rf $(PROJECT_ROOT)/build
 
@@ -28,8 +29,7 @@ bootstrap: deps lint-deps # install all dependencies
 .PHONY: deps
 deps:  ## Install build and development dependencies
 	@echo "==> Updating build dependencies..."
-	#go get -u gotest.tools/gotestsum
-	command -v nomad || go get -u github.com/hashicorp/nomad
+	go mod download
 
 .PHONY: lint-deps
 lint-deps: ## Install linter dependencies
