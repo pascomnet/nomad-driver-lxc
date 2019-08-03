@@ -32,9 +32,8 @@ type taskHandle struct {
 	completedAt time.Time
 	exitResult  *drivers.ExitResult
 
-	net *drivers.DriverNetwork
-	doneCh                chan bool
-
+	net    *drivers.DriverNetwork
+	doneCh chan bool
 }
 
 var (
