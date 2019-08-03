@@ -8,7 +8,7 @@ jobs:
       - run:
           name: prepare lxc
           command: |
-            sudo -E bash ./scripts/travis-linux.s
+            sudo -E bash ./scripts/travis-linux.sh
       - run:
           name: prepare go mod
           command: |
