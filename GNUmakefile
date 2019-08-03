@@ -16,7 +16,7 @@ build:
 test:
 	@echo "==> Running tests..."
 	mkdir -p $(PROJECT_ROOT)/build/test
-	$(PROJECT_ROOT)/build/gotestsum --junitfile $(PROJECT_ROOT)/build/test/resultx.ml -- -timeout=15m ./...
+	$(PROJECT_ROOT)/build/gotestsum --junitfile $(PROJECT_ROOT)/build/test/result.xml -- -timeout=15m ./...
 
 .PHONY: fmt
 fmt:
@@ -68,9 +68,9 @@ pkg/linux_amd64/nomad-driver-lxc:
 	./scripts/build.sh
 
 .PHONY: dev
-dev: clean pkg/linux_amd64/nomad-driver-lxc
+dev: pkg/linux_amd64/nomad-driver-lxc
 
 .PHONY: release
-release: clean pkg/linux_amd64.zip
+release: pkg/linux_amd64.zip
 	@echo "==> Result:"
 	@tree --dirsfirst $(PROJECT_ROOT)/pkg
