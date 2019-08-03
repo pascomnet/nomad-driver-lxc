@@ -1,18 +1,14 @@
 version: 2
 jobs:
   build:
-    docker:
-      - image: circleci/golang:1.12
+    machine:
+      image: ubuntu-1604:201903-01
     steps:
       - checkout
       - run:
-          name: info
+          name: prepare tools
           command: |
-            whoami
-      - run:
-          name: prepare lxc
-          command: |
-            sudo -E bash ./scripts/travis-linux.sh
+            sudo -E bash ./scripts/circleci-linux.sh
       - run:
           name: prepare go mod
           command: |
@@ -24,7 +20,9 @@ jobs:
       - run:
           name: test
           command: |
-            sudo -E "PATH=$PATH" GOTESTSUM_JUNITFILE=/tmp/results.xml make test
+            sudo -E "PATH=$PATH" make test
+      - store_test_results:
+          path: build/test/
       - run:
           name: compile driver
           command: |

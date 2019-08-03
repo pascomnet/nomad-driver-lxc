@@ -15,9 +15,8 @@ build:
 .PHONY: test
 test:
 	@echo "==> Running tests..."
-	go test \
-		-timeout=15m \
-	       ./...	
+	mkdir -p $(PROJECT_ROOT)/build/test
+	$(PROJECT_ROOT)/build/gotestsum --junitfile $(PROJECT_ROOT)/build/test/resultx.ml -- -timeout=15m ./...
 
 .PHONY: fmt
 fmt:
@@ -25,18 +24,17 @@ fmt:
 	gofmt -s -w ./lxc
 
 .PHONY: bootstrap
-bootstrap: deps lint-deps # install all dependencies
+bootstrap: deps # install all dependencies
 
 .PHONY: deps
 deps:  ## Install build and development dependencies
+	mkdir -p build
 	@echo "==> Updating build dependencies..."
 	go mod download
-
-.PHONY: lint-deps
-lint-deps: ## Install linter dependencies
-	@echo "==> Updating linter dependencies..."
-	mkdir -p build
+	@echo "==> Installing golangci-lint..."
 	GOBIN=$(PROJECT_ROOT)/build GO111MODULE=on go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.17.1
+	@echo "==> Installing gotestsum..."
+	GOBIN=$(PROJECT_ROOT)/build GO111MODULE=on go get -u gotest.tools/gotestsum@v0.3.5
 
 .PHONY: check
 check: ## Lint the source code
