@@ -7,7 +7,7 @@ set -o errexit
 apt-get update || true
 
 # install lxc for running the test suite
-apt-get install -y liblxc1 lxc-dev lxc lxc-templates wget ca-certificates
+apt-get install -y liblxc1 lxc-dev lxc lxc-templates wget ca-certificates tree
 
 cd /usr/local
 # remove default circleci go
