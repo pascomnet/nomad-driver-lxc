@@ -14,6 +14,7 @@ build:
 
 .PHONY: test
 test:
+	@echo "==> Running tests..."
 	go test \
 		-timeout=15m \
 	       ./...	
