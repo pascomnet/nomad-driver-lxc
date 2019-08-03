@@ -18,15 +18,15 @@ jobs:
           command: |
             make check
       - run:
-          name: test
-          command: |
-            sudo -E "PATH=$PATH" make test
-      - store_test_results:
-          path: build/test/
-      - run:
           name: compile driver
           command: |
             make release
       - store_artifacts:
           path: pkg/linux_amd64.zip
           destination: linux_amd64.zip
+      - run:
+          name: test
+          command: |
+            sudo -E "PATH=$PATH" make test
+      - store_test_results:
+          path: build/test/
