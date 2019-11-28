@@ -286,7 +286,16 @@ func (d *Driver) RecoverTask(handle *drivers.TaskHandle) error {
 	if err != nil {
 		return fmt.Errorf("failed to create container ref: %v", err)
 	}
+	if !c.Defined() {
+		return fmt.Errorf("Can not recover nonexisting container: %s", taskState.ContainerName)
+	}
 
+	if !c.Running() {
+		d.logger.Info("Recovered container is not running, try to restart it", "name", c.Name() )
+		if err := c.Start(); err != nil {
+			return fmt.Errorf("failed to start container ref: %v", err)
+		}
+	}
 	initPid := c.InitPid()
 	d.logger.Debug("Recovered", "name", c.Name(), "pid", initPid)
 	h := &taskHandle{
