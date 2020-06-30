@@ -33,7 +33,7 @@ deps:  ## Install build and development dependencies
 	@echo "==> Download build dependencies..."
 	go mod download
 	@echo "==> Installing golangci-lint..."
-	GOBIN=$(PROJECT_ROOT)/build GO111MODULE=on go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.17.1
+	GOBIN=$(PROJECT_ROOT)/build GO111MODULE=on go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.18.0
 	@echo "==> Installing gotestsum..."
 	GOBIN=$(PROJECT_ROOT)/build GO111MODULE=on go get -u gotest.tools/gotestsum@v0.3.5
 
