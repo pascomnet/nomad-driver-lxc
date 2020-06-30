@@ -12,6 +12,6 @@ apt-get install -y liblxc1 lxc-dev lxc lxc-templates wget ca-certificates tree
 cd /usr/local
 # remove default circleci go
 rm -rf go
-# setup go 1.12.x
-wget -O- https://storage.googleapis.com/golang/go1.12.7.linux-amd64.tar.gz| tar xfz -
+# setup go 1.13.x
+wget -O- https://storage.googleapis.com/golang/go1.13.9.linux-amd64.tar.gz| tar xfz -
 ln -s /usr/local/go/bin/go /usr/bin/go

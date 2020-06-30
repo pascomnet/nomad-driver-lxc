@@ -1,6 +1,6 @@
 module github.com/hashicorp/nomad-driver-lxc
 
-go 1.12
+go 1.13
 
 replace (
 	// fix Sirupsen/logrus vs sirupsen/logrus problems
@@ -13,7 +13,7 @@ require (
 	github.com/boltdb/bolt v1.3.1 // indirect
 	github.com/fsouza/go-dockerclient v1.4.2 // indirect
 	github.com/golang/protobuf v1.3.2 // indirect
-	github.com/golangci/golangci-lint v1.17.1 // indirect
+	github.com/golangci/golangci-lint v1.18.0
 	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75 // indirect
 	github.com/hashicorp/consul v1.4.5 // indirect
 	github.com/hashicorp/consul-template v0.20.0 // indirect
@@ -40,8 +40,6 @@ require (
 	github.com/ugorji/go v0.0.0-20170620060102-0053ebfd9d0e // indirect
 	golang.org/x/net v0.0.0-20190724013045-ca1201d0de80 // indirect
 	golang.org/x/sys v0.0.0-20190801041406-cbf593c0f2f3 // indirect
-	golang.org/x/tools v0.0.0-20190802220118-1d1727260058 // indirect
-	google.golang.org/appengine v1.4.0 // indirect
 	gopkg.in/lxc/go-lxc.v2 v2.0.0-20190625173123-f4822c6bba64
 	gotest.tools/gotestsum v0.3.5 // indirect
 )
