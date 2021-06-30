@@ -4,18 +4,13 @@ dist: xenial
 sudo: required
 
 go:
-  - "1.x"
+  - "1.15.x"
 
 before_install:
   - sudo -E bash ./scripts/travis-linux.sh
 
 install:
-  - make deps
   - make lint-deps
 
 script:
-  - sudo -E "PATH=$PATH" GOTESTSUM_JUNITFILE=/tmp/results.xml make travis
-
-after_script:
-  - cat /tmp/results.xml
-
+  - sudo -E "PATH=$PATH" make check test

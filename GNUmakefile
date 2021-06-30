@@ -4,9 +4,7 @@ default: build
 
 .PHONY: clean
 clean: ## Remove build artifacts
-	go clean
 	rm -rf $(PROJECT_ROOT)/pkg
-	rm -rf $(PROJECT_ROOT)/build
 
 .PHONY: build
 build:
@@ -14,41 +12,29 @@ build:
 
 .PHONY: test
 test:
-	@echo "==> Running tests..."
-	mkdir -p $(PROJECT_ROOT)/build/test
-	$(PROJECT_ROOT)/build/gotestsum --junitfile $(PROJECT_ROOT)/build/test/result.xml -- -timeout=15m ./...
+	go test \
+		-timeout=15m \
+	       ./...
 
 .PHONY: fmt
 fmt:
 	@echo "==> Fixing source code with gofmt..."
 	gofmt -s -w ./lxc
 
-.PHONY: bootstrap
-bootstrap: deps # install all dependencies
-
-.PHONY: deps
-deps:  ## Install build and development dependencies
-	mkdir -p build
-	go version
-	@echo "==> Download build dependencies..."
-	go mod download
-	@echo "==> Installing golangci-lint..."
-	GOBIN=$(PROJECT_ROOT)/build GO111MODULE=on go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.18.0
-	@echo "==> Installing gotestsum..."
-	GOBIN=$(PROJECT_ROOT)/build GO111MODULE=on go get -u gotest.tools/gotestsum@v0.3.5
+.PHONY: lint-deps
+lint-deps: ## Install linter dependencies
+	@echo "==> Updating linter dependencies..."
+	GO111MODULE=on go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.24.0
 
 .PHONY: check
 check: ## Lint the source code
 	@echo "==> Linting source code..."
-	$(PROJECT_ROOT)/build/golangci-lint run
+	@golangci-lint run -j 1 --timeout=10m
 
 .PHONY: changelogfmt
 changelogfmt:
 	@echo "--> Making [GH-xxxx] references clickable..."
 	@sed -E 's|([^\[])\[GH-([0-9]+)\]|\1[[GH-\2](https://github.com/hashicorp/nomad/issues/\2)]|g' CHANGELOG.md > changelog.tmp && mv changelog.tmp CHANGELOG.md
-
-.PHONY: travis
-travis: check test
 
 ALL_TARGETS += linux_amd64
 
@@ -68,9 +54,9 @@ pkg/linux_amd64/nomad-driver-lxc:
 	./scripts/build.sh
 
 .PHONY: dev
-dev: pkg/linux_amd64/nomad-driver-lxc
+dev: clean pkg/linux_amd64/nomad-driver-lxc
 
 .PHONY: release
-release: pkg/linux_amd64.zip
+release: clean pkg/linux_amd64.zip
 	@echo "==> Result:"
 	@tree --dirsfirst $(PROJECT_ROOT)/pkg

@@ -61,20 +61,22 @@ func (d *Driver) initializeContainer(cfg *drivers.TaskConfig, taskConfig TaskCon
 	}
 	c.SetVerbosity(v)
 
-	level, ok := logLevels[taskConfig.LogLevel]
-	if !ok {
+	if v, ok := logLevels[taskConfig.LogLevel]; ok {
+		err := c.SetLogLevel(v)
+		if err != nil {
+			d.releaseLxcHandle(c)
+			return nil, err
+		}
+	} else {
 		d.releaseLxcHandle(c)
 		return nil, fmt.Errorf("lxc driver config 'log_level' can only be trace, debug, info, warn or error")
 	}
-	if err := c.SetLogLevel(level); err != nil {
-		d.releaseLxcHandle(c)
-		return nil, fmt.Errorf("Unable to set log level: %v", err)
-	}
 
 	logFile := filepath.Join(cfg.TaskDir().Dir, fmt.Sprintf("%v-lxc.log", cfg.Name))
-	if err := c.SetLogFile(logFile); err != nil {
+	err = c.SetLogFile(logFile)
+	if err != nil {
 		d.releaseLxcHandle(c)
-		return nil, fmt.Errorf("Unable to set log file: %v", err)
+		return nil, err
 	}
 
 	return c, nil
@@ -171,6 +173,10 @@ func (d *Driver) mountEntries(cfg *drivers.TaskConfig, taskConfig TaskConfig) ([
 		} else {
 			// Relative source paths are treated as relative to alloc dir
 			paths[0] = filepath.Join(cfg.TaskDir().Dir, paths[0])
+			if !volumesEnabled && pathEscapesSandbox(cfg.TaskDir().Dir, paths[0]) {
+				return nil, fmt.Errorf(
+					"bind-mount path escapes task directory but volumes are disabled")
+			}
 		}
 
 		// LXC assumes paths are relative with respect to rootfs
@@ -180,6 +186,17 @@ func (d *Driver) mountEntries(cfg *drivers.TaskConfig, taskConfig TaskConfig) ([
 
 	return mounts, nil
 
+}
+
+func pathEscapesSandbox(sandboxDir, path string) bool {
+	rel, err := filepath.Rel(sandboxDir, path)
+	if err != nil {
+		return true
+	}
+	if strings.HasPrefix(rel, "..") {
+		return true
+	}
+	return false
 }
 
 func (d *Driver) devicesCgroupEntries(cfg *drivers.TaskConfig) ([]string, error) {

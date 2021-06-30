@@ -2,7 +2,7 @@
 # vi: set ft=ruby :
 #
 
-LINUX_BASE_BOX = "bento/ubuntu-16.04"
+LINUX_BASE_BOX = "ubuntu/focal64"
 
 Vagrant.configure(2) do |config|
 	# Compilation and development boxes
@@ -32,14 +32,14 @@ def configureLinuxProvisioners(vmCfg)
 		privileged: true,
 		path: './scripts/vagrant-linux-priv-go.sh'
 
-        vmCfg.vm.provision "shell",
-                privileged: true,
-                path: './scripts/vagrant-linux-priv-config.sh'
+    vmCfg.vm.provision "shell",
+        privileged: true,
+        path: './scripts/vagrant-linux-priv-config.sh'
 
 	return vmCfg
 end
 
-def configureProviders(vmCfg, cpus: "2", memory: "2048")
+def configureProviders(vmCfg, cpus: "2", memory: "4096")
 	vmCfg.vm.provider "virtualbox" do |v|
 		v.customize ["modifyvm", :id, "--cableconnected1", "on"]
 		v.memory = memory

@@ -15,6 +15,7 @@ Runtime Dependencies
 ------------
 
 - [Nomad](https://www.nomadproject.io/downloads.html) 0.9+
+- [Go](https://golang.org/doc/install) 1.15+ (to build the provider plugin)
 - Linux host with `liblxc` and `lxc-templates` packages installed
 
 Building The Driver

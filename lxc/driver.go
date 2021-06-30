@@ -6,6 +6,7 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/nomad-driver-lxc/version"
 	"github.com/hashicorp/nomad/client/stats"
 	"github.com/hashicorp/nomad/drivers/shared/eventer"
 	"github.com/hashicorp/nomad/plugins/base"
@@ -32,7 +33,7 @@ var (
 	pluginInfo = &base.PluginInfoResponse{
 		Type:              base.PluginTypeDriver,
 		PluginApiVersions: []string{drivers.ApiVersion010},
-		PluginVersion:     "0.1.1-dev",
+		PluginVersion:     version.Version,
 		Name:              pluginName,
 	}
 
@@ -47,14 +48,21 @@ var (
 			hclspec.NewLiteral("true"),
 		),
 		"lxc_path": hclspec.NewAttr("lxc_path", "string", false),
-		"destroy_containers": hclspec.NewDefault(
-			hclspec.NewAttr("destroy_containers", "bool", false),
-			hclspec.NewLiteral("true"),
-		),
 		"network_mode": hclspec.NewDefault(
 			hclspec.NewAttr("network_mode", "string", false),
 			hclspec.NewLiteral("\"bridge\""),
 		),
+		// garbage collection options
+		// default needed for both if the gc {...} block is not set and
+		// if the default fields are missing
+		"gc": hclspec.NewDefault(hclspec.NewBlock("gc", false, hclspec.NewObject(map[string]*hclspec.Spec{
+			"container": hclspec.NewDefault(
+				hclspec.NewAttr("container", "bool", false),
+				hclspec.NewLiteral("true"),
+			),
+		})), hclspec.NewLiteral(`{
+			container = true
+		}`)),
 	})
 
 	// taskConfigSpec is the hcl specification for the driver config section of
@@ -114,6 +122,11 @@ type Driver struct {
 	logger hclog.Logger
 }
 
+// GCConfig is the driver GarbageCollection configuration
+type GCConfig struct {
+	Container bool `codec:"container"`
+}
+
 // Config is the driver configuration set by the SetConfig RPC call
 type Config struct {
 	// Enabled is set to true to enable the lxc driver
@@ -123,11 +136,10 @@ type Config struct {
 
 	LXCPath string `codec:"lxc_path"`
 
-	// if enabled (default!): destroy lxc container when task is destroyed
-	DestroyContainers bool `codec:"destroy_containers"`
-
 	// default networking mode if not specified in task config
 	NetworkMode string `codec:"network_mode"`
+
+	GC GCConfig `codec:"gc"`
 }
 
 // TaskConfig is the driver configuration of a task within a job
@@ -291,7 +303,7 @@ func (d *Driver) RecoverTask(handle *drivers.TaskHandle) error {
 	}
 
 	if !c.Running() {
-		d.logger.Info("Recovered container is not running, try to restart it", "name", c.Name() )
+		d.logger.Info("Recovered container is not running, try to restart it", "name", c.Name())
 		if err := c.Start(); err != nil {
 			return fmt.Errorf("failed to start container ref: %v", err)
 		}
@@ -506,7 +518,7 @@ func (d *Driver) DestroyTask(taskID string, force bool) error {
 			handle.logger.Error("failed to destroy executor", "err", err)
 		}
 	}
-	if d.config.DestroyContainers {
+	if d.config.GC.Container {
 		handle.logger.Debug("Destroying container", "container", handle.container.Name())
 		// delete the container itself
 		if err := handle.container.Destroy(); err != nil {
